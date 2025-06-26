@@ -14,6 +14,7 @@ class GameScene: SKScene {
         
         let path = createPath()
         createShape(with: path)
+        createBall()
     }
     
     private func createPath() -> CGMutablePath {
@@ -46,6 +47,15 @@ class GameScene: SKScene {
         let shape = SKShapeNode(path: path)
         shape.lineWidth = 70
         shape.strokeColor = .brown
+        addChild(shape)
+    }
+    
+    private func createBall() {
+        let shape = SKShapeNode(rectOf: CGSize(width: 40, height: 40), cornerRadius: 20)
+        shape.fillColor = .systemTeal
+        shape.strokeColor = .clear
+        shape.zPosition = 1
+        shape.position = CGPoint(x: size.width / 2, y: size.height - 100)
         addChild(shape)
     }
     
