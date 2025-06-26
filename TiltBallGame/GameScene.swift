@@ -13,12 +13,12 @@ class GameScene: SKScene {
         backgroundColor = .white
         
         let path = createRandomCurvedPath(size: size)
-        createShape(with: path)
-        createBall()
-        createGoal()
+        setupPathNode(with: path)
+        setupBallNode()
+        setupGoalNode()
     }
     
-    private func createRandomCurvedPath(size: CGSize) -> UIBezierPath {
+    private func createRandomCurvedPath(size: CGSize) -> CGMutablePath {
         let xPoint: CGFloat = size.width / 2
         let yOffset: CGFloat = 100
         
@@ -53,7 +53,7 @@ class GameScene: SKScene {
             y: size.height - yOffset - (sectionHeight * 3)
         )
         
-        let path = UIBezierPath()
+        let path = CGMutablePath()
         path.move(to: startPoint)
         
         // Create control points closer to the path for smoother connections
@@ -62,68 +62,72 @@ class GameScene: SKScene {
             y: (startPoint.y + corner1.y) / 2
         )
         
-        path.addQuadCurve(to: corner1, controlPoint: controlPoint1)
+        path.addQuadCurve(to: corner1, control: controlPoint1)
         
         let controlPoint2 = CGPoint(
             x: (corner1.x + corner2.x) / 2 + (corner2.x > corner1.x ? -60 : 60),
             y: (corner1.y + corner2.y) / 2
         )
         
-        path.addQuadCurve(to: corner2, controlPoint: controlPoint2)
+        path.addQuadCurve(to: corner2, control: controlPoint2)
         
         let controlPoint3 = CGPoint(
             x: (corner2.x + corner3.x) / 2 + (corner3.x > corner2.x ? -60 : 60),
             y: (corner2.y + corner3.y) / 2
         )
         
-        path.addQuadCurve(to: corner3, controlPoint: controlPoint3)
+        path.addQuadCurve(to: corner3, control: controlPoint3)
         
         let controlPoint4 = CGPoint(
             x: (corner3.x + endPoint.x) / 2 + (endPoint.x > corner3.x ? -40 : 40),
             y: (corner3.y + endPoint.y) / 2
         )
         
-        path.addQuadCurve(to: endPoint, controlPoint: controlPoint4)
+        path.addQuadCurve(to: endPoint, control: controlPoint4)
         
         return path
     }
     
-    private func createShape(with path: UIBezierPath) {
-        let shape = SKShapeNode(path: path.cgPath)
+    private func setupPathNode(with path: CGMutablePath) {
+        let pathNode = SKShapeNode(path: path)
         
-        shape.lineWidth = 60
-        shape.strokeColor = .brown
-        shape.lineJoin = .round
-        
-        // add physicsbody
-        shape.physicsBody = SKPhysicsBody(edgeChainFrom: path.cgPath)
-        shape.physicsBody?.categoryBitMask = PhysicsCategory.path
-        shape.physicsBody?.contactTestBitMask = PhysicsCategory.ball
-        shape.physicsBody?.isDynamic = false
-        
-        addChild(shape)
-    }
-    
-    private func createBall() {
-        let shape = SKShapeNode(rectOf: CGSize(width: 40, height: 40), cornerRadius: 20)
-        
-        shape.fillColor = [.systemTeal, .systemMint, .systemPink].randomElement() ?? .systemGray
-        shape.strokeColor = .clear
-        shape.zPosition = 3
-        shape.position = CGPoint(x: size.width / 2, y: size.height - 100)
+        pathNode.lineWidth = 60
+        pathNode.strokeColor = .brown
+        pathNode.lineJoin = .round
         
         // add physicsbody
-        shape.physicsBody = SKPhysicsBody(circleOfRadius: 20)
-        shape.physicsBody?.categoryBitMask = PhysicsCategory.ball
-        shape.physicsBody?.contactTestBitMask = PhysicsCategory.path | PhysicsCategory.goal
+        pathNode.physicsBody = SKPhysicsBody(edgeChainFrom: path)
+        pathNode.physicsBody?.categoryBitMask = PhysicsCategory.path
+        pathNode.physicsBody?.contactTestBitMask = PhysicsCategory.ball
+        pathNode.physicsBody?.isDynamic = false
         
-        addChild(shape)
+        addChild(pathNode)
     }
     
-    private func createGoal() {
+    private func setupBallNode() {
+        let ball = SKShapeNode(circleOfRadius: 20)
+        
+        ball.fillColor = [.systemTeal, .systemMint, .systemPink].randomElement() ?? .systemGray
+        ball.strokeColor = .clear
+        ball.lineWidth = 0
+        ball.zPosition = 3
+        ball.position = CGPoint(x: size.width / 2, y: size.height - 100)
+        
+        // add physicsbody
+        ball.physicsBody = SKPhysicsBody(circleOfRadius: 20)
+        ball.physicsBody?.categoryBitMask = PhysicsCategory.ball
+        ball.physicsBody?.contactTestBitMask = PhysicsCategory.path | PhysicsCategory.goal
+        ball.physicsBody?.isDynamic = true
+        ball.physicsBody?.affectedByGravity = false
+        ball.physicsBody?.linearDamping = 0.7
+        
+        addChild(ball)
+    }
+    
+    private func setupGoalNode() {
         let position = CGPoint(x: size.width / 2, y: 100)
         
-        let border = SKShapeNode(rectOf: CGSize(width: 60, height: 60), cornerRadius: 30)
+        let border = SKShapeNode(circleOfRadius: 30)
         border.fillColor = .gray
         border.strokeColor = .clear
         border.zPosition = 1
@@ -131,7 +135,7 @@ class GameScene: SKScene {
         
         addChild(border)
                 
-        let goal = SKShapeNode(rectOf: CGSize(width: 40, height: 40), cornerRadius: 20)
+        let goal = SKShapeNode(circleOfRadius: 20)
         goal.fillColor = .black
         goal.strokeColor = .clear
         goal.zPosition = 2
