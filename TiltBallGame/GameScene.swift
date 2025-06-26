@@ -90,19 +90,33 @@ class GameScene: SKScene {
     
     private func createShape(with path: UIBezierPath) {
         let shape = SKShapeNode(path: path.cgPath)
+        
         shape.lineWidth = 60
         shape.strokeColor = .brown
         shape.lineJoin = .round
-
+        
+        // add physicsbody
+        shape.physicsBody = SKPhysicsBody(edgeChainFrom: path.cgPath)
+        shape.physicsBody?.categoryBitMask = PhysicsCategory.path
+        shape.physicsBody?.contactTestBitMask = PhysicsCategory.ball
+        shape.physicsBody?.isDynamic = false
+        
         addChild(shape)
     }
     
     private func createBall() {
         let shape = SKShapeNode(rectOf: CGSize(width: 40, height: 40), cornerRadius: 20)
+        
         shape.fillColor = [.systemTeal, .systemMint, .systemPink].randomElement() ?? .systemGray
         shape.strokeColor = .clear
         shape.zPosition = 3
         shape.position = CGPoint(x: size.width / 2, y: size.height - 100)
+        
+        // add physicsbody
+        shape.physicsBody = SKPhysicsBody(circleOfRadius: 20)
+        shape.physicsBody?.categoryBitMask = PhysicsCategory.ball
+        shape.physicsBody?.contactTestBitMask = PhysicsCategory.path | PhysicsCategory.goal
+        
         addChild(shape)
     }
     
@@ -116,12 +130,18 @@ class GameScene: SKScene {
         border.position = position
         
         addChild(border)
-        
+                
         let goal = SKShapeNode(rectOf: CGSize(width: 40, height: 40), cornerRadius: 20)
         goal.fillColor = .black
         goal.strokeColor = .clear
         goal.zPosition = 2
         goal.position = position
+        
+        // add physicsbody
+        goal.physicsBody = SKPhysicsBody(circleOfRadius: 20)
+        goal.physicsBody?.categoryBitMask = PhysicsCategory.goal
+        goal.physicsBody?.contactTestBitMask = PhysicsCategory.ball
+        goal.physicsBody?.isDynamic = false
         
         addChild(goal)
     }
@@ -134,4 +154,3 @@ class GameScene: SKScene {
         print(location)
     }
 }
-
