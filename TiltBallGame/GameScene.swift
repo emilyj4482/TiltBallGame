@@ -15,6 +15,7 @@ class GameScene: SKScene {
         let path = createRandomCurvedPath(size: size)
         createShape(with: path)
         createBall()
+        createGoal()
     }
     
     private func createRandomCurvedPath(size: CGSize) -> UIBezierPath {
@@ -100,9 +101,29 @@ class GameScene: SKScene {
         let shape = SKShapeNode(rectOf: CGSize(width: 40, height: 40), cornerRadius: 20)
         shape.fillColor = [.systemTeal, .systemMint, .systemPink].randomElement() ?? .systemGray
         shape.strokeColor = .clear
-        shape.zPosition = 1
+        shape.zPosition = 3
         shape.position = CGPoint(x: size.width / 2, y: size.height - 100)
         addChild(shape)
+    }
+    
+    private func createGoal() {
+        let position = CGPoint(x: size.width / 2, y: 100)
+        
+        let border = SKShapeNode(rectOf: CGSize(width: 60, height: 60), cornerRadius: 30)
+        border.fillColor = .gray
+        border.strokeColor = .clear
+        border.zPosition = 1
+        border.position = position
+        
+        addChild(border)
+        
+        let goal = SKShapeNode(rectOf: CGSize(width: 40, height: 40), cornerRadius: 20)
+        goal.fillColor = .black
+        goal.strokeColor = .clear
+        goal.zPosition = 2
+        goal.position = position
+        
+        addChild(goal)
     }
     
     // debugging
