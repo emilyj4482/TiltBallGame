@@ -12,47 +12,93 @@ class GameScene: SKScene {
         size = view.bounds.size
         backgroundColor = .white
         
-        let path = createPath()
+        let path = createRandomCurvedPath(size: size)
         createShape(with: path)
         createBall()
     }
     
-    private func createPath() -> CGMutablePath {
+    private func createRandomCurvedPath(size: CGSize) -> UIBezierPath {
         let xPoint: CGFloat = size.width / 2
         let yOffset: CGFloat = 100
         
         let startPoint = CGPoint(x: xPoint, y: size.height - yOffset)
         let endPoint = CGPoint(x: xPoint, y: yOffset)
         
-        let midPoint = CGPoint(x: xPoint, y: (startPoint.y - endPoint.y) * 0.4)
+        // Divide the height into sections to ensure points are distributed vertically
+        let sectionHeight = (size.height - 2 * yOffset) / 4
         
-        let path = CGMutablePath()
+        // Randomly decide if we start curving left or right
+        let startLeft = Bool.random()
+        
+        // Generate 3 corner points with alternating sides based on random start
+        let corner1 = CGPoint(
+            x: startLeft ?
+            CGFloat.random(in: 80...(size.width * 0.4)) :  // Left side
+            CGFloat.random(in: (size.width * 0.6)...(size.width - 80)), // Right side
+            y: size.height - yOffset - sectionHeight
+        )
+        
+        let corner2 = CGPoint(
+            x: startLeft ?
+            CGFloat.random(in: (size.width * 0.6)...(size.width - 80)) : // Right side
+            CGFloat.random(in: 80...(size.width * 0.4)), // Left side
+            y: size.height - yOffset - (sectionHeight * 2)
+        )
+        
+        let corner3 = CGPoint(
+            x: startLeft ?
+            CGFloat.random(in: 80...(size.width * 0.4)) :  // Left side again
+            CGFloat.random(in: (size.width * 0.6)...(size.width - 80)), // Right side again
+            y: size.height - yOffset - (sectionHeight * 3)
+        )
+        
+        let path = UIBezierPath()
         path.move(to: startPoint)
         
-        path.addCurve(
-            to: midPoint,
-            control1: CGPoint(x: 100 * 0.1, y: 580 * 0.7),
-            control2: CGPoint(x: 300 * 1.5, y: 386 * 1.3)
+        // Create control points closer to the path for smoother connections
+        let controlPoint1 = CGPoint(
+            x: (startPoint.x + corner1.x) / 2 + (corner1.x > startPoint.x ? -40 : 40),
+            y: (startPoint.y + corner1.y) / 2
         )
         
-        path.addQuadCurve(
-            to: endPoint,
-            control: CGPoint(x: 100 * 0.5, y: 193 * 0.9)
+        path.addQuadCurve(to: corner1, controlPoint: controlPoint1)
+        
+        let controlPoint2 = CGPoint(
+            x: (corner1.x + corner2.x) / 2 + (corner2.x > corner1.x ? -60 : 60),
+            y: (corner1.y + corner2.y) / 2
         )
+        
+        path.addQuadCurve(to: corner2, controlPoint: controlPoint2)
+        
+        let controlPoint3 = CGPoint(
+            x: (corner2.x + corner3.x) / 2 + (corner3.x > corner2.x ? -60 : 60),
+            y: (corner2.y + corner3.y) / 2
+        )
+        
+        path.addQuadCurve(to: corner3, controlPoint: controlPoint3)
+        
+        let controlPoint4 = CGPoint(
+            x: (corner3.x + endPoint.x) / 2 + (endPoint.x > corner3.x ? -40 : 40),
+            y: (corner3.y + endPoint.y) / 2
+        )
+        
+        path.addQuadCurve(to: endPoint, controlPoint: controlPoint4)
         
         return path
     }
     
-    private func createShape(with path: CGPath) {
-        let shape = SKShapeNode(path: path)
-        shape.lineWidth = 70
+    private func createShape(with path: UIBezierPath) {
+        let shape = SKShapeNode(path: path.cgPath)
+        shape.lineWidth = 60
         shape.strokeColor = .brown
+        shape.lineJoin = .round
+
         addChild(shape)
     }
     
     private func createBall() {
         let shape = SKShapeNode(rectOf: CGSize(width: 40, height: 40), cornerRadius: 20)
-        shape.fillColor = .systemTeal
+        shape.fillColor = [.systemTeal, .systemMint, .systemPink].randomElement() ?? .systemGray
         shape.strokeColor = .clear
         shape.zPosition = 1
         shape.position = CGPoint(x: size.width / 2, y: size.height - 100)
