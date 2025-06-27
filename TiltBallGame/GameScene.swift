@@ -6,8 +6,16 @@
 //
 
 import SpriteKit
+import CoreMotion
 
 class GameScene: SKScene {
+    
+    private var motionManager = CMMotionManager()
+    
+    private var pathNode: SKShapeNode!
+    private var ballNode: SKShapeNode!
+    private var goalNode: SKShapeNode!
+    
     override func didMove(to view: SKView) {
         size = view.bounds.size
         backgroundColor = .white
@@ -16,6 +24,9 @@ class GameScene: SKScene {
         setupPathNode(with: path)
         setupBallNode()
         setupGoalNode()
+        
+        physicsWorld.contactDelegate = self
+        startDeviceMotionUpdates()
     }
     
     private func createRandomCurvedPath(size: CGSize) -> CGMutablePath {
@@ -89,7 +100,7 @@ class GameScene: SKScene {
     }
     
     private func setupPathNode(with path: CGMutablePath) {
-        let pathNode = SKShapeNode(path: path)
+        pathNode = SKShapeNode(path: path)
         
         pathNode.lineWidth = 60
         pathNode.strokeColor = .brown
@@ -105,23 +116,23 @@ class GameScene: SKScene {
     }
     
     private func setupBallNode() {
-        let ball = SKShapeNode(circleOfRadius: 20)
+        ballNode = SKShapeNode(circleOfRadius: 20)
         
-        ball.fillColor = [.systemTeal, .systemMint, .systemPink].randomElement() ?? .systemGray
-        ball.strokeColor = .clear
-        ball.lineWidth = 0
-        ball.zPosition = 3
-        ball.position = CGPoint(x: size.width / 2, y: size.height - 100)
+        ballNode.fillColor = [.systemTeal, .systemMint, .systemPink].randomElement() ?? .systemGray
+        ballNode.strokeColor = .clear
+        ballNode.lineWidth = 0
+        ballNode.zPosition = 3
+        ballNode.position = CGPoint(x: size.width / 2, y: size.height - 100)
         
         // add physicsbody
-        ball.physicsBody = SKPhysicsBody(circleOfRadius: 20)
-        ball.physicsBody?.categoryBitMask = PhysicsCategory.ball
-        ball.physicsBody?.contactTestBitMask = PhysicsCategory.path | PhysicsCategory.goal
-        ball.physicsBody?.isDynamic = true
-        ball.physicsBody?.affectedByGravity = false
-        ball.physicsBody?.linearDamping = 0.7
+        ballNode.physicsBody = SKPhysicsBody(circleOfRadius: 20)
+        ballNode.physicsBody?.categoryBitMask = PhysicsCategory.ball
+        ballNode.physicsBody?.contactTestBitMask = PhysicsCategory.path | PhysicsCategory.goal
+        ballNode.physicsBody?.isDynamic = true
+        ballNode.physicsBody?.affectedByGravity = false
+        ballNode.physicsBody?.linearDamping = 0.7
         
-        addChild(ball)
+        addChild(ballNode)
     }
     
     private func setupGoalNode() {
@@ -135,19 +146,37 @@ class GameScene: SKScene {
         
         addChild(border)
                 
-        let goal = SKShapeNode(circleOfRadius: 20)
-        goal.fillColor = .black
-        goal.strokeColor = .clear
-        goal.zPosition = 2
-        goal.position = position
+        goalNode = SKShapeNode(circleOfRadius: 20)
+        goalNode.fillColor = .black
+        goalNode.strokeColor = .clear
+        goalNode.zPosition = 2
+        goalNode.position = position
         
         // add physicsbody
-        goal.physicsBody = SKPhysicsBody(circleOfRadius: 20)
-        goal.physicsBody?.categoryBitMask = PhysicsCategory.goal
-        goal.physicsBody?.contactTestBitMask = PhysicsCategory.ball
-        goal.physicsBody?.isDynamic = false
+        goalNode.physicsBody = SKPhysicsBody(circleOfRadius: 20)
+        goalNode.physicsBody?.categoryBitMask = PhysicsCategory.goal
+        goalNode.physicsBody?.contactTestBitMask = PhysicsCategory.ball
+        goalNode.physicsBody?.isDynamic = false
         
-        addChild(goal)
+        addChild(goalNode)
+    }
+    
+    override func update(_ currentTime: TimeInterval) {
+        // current ball position
+        let position = ballNode.position
+        
+        // make ball node never disappear from the frame
+        if position.x > frame.maxX {
+            ballNode.position.x = frame.minX
+        } else if position.x < frame.minX {
+            ballNode.position.x = frame.maxX
+        }
+        
+        if position.y > frame.maxY {
+            ballNode.position.y = frame.minY
+        } else if position.y < frame.minY {
+            ballNode.position.y = frame.maxY
+        }
     }
     
     // debugging
@@ -156,5 +185,64 @@ class GameScene: SKScene {
         let location = touch.location(in: self)
         
         print(location)
+    }
+    
+    deinit {
+        motionManager.stopDeviceMotionUpdates()
+    }
+}
+
+extension GameScene: SKPhysicsContactDelegate {
+    private func startDeviceMotionUpdates() {
+        guard motionManager.isDeviceMotionAvailable else { return }
+        
+        // update interval : 60 updates per 1 second
+        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0
+        
+        // start device motion updates
+        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] (motion, error) in
+            guard let motion = motion else {
+                print("[Error] Failed to get device motion data")
+                return
+            }
+            
+            if let error = error {
+                print("[Error] \(error.localizedDescription)")
+                return
+            }
+            
+            self?.handleDeviceMotionUpdates(motion)
+        }
+    }
+    
+    private func handleDeviceMotionUpdates(_ motion: CMDeviceMotion) {
+        // getting device orientation data
+        let attitude = motion.attitude
+        
+        /*
+         configuration
+         - sensitivity : high
+         - deadzone : ignore small movements to reduce jitter
+         */
+        let sensitivity: CGFloat = 500.0
+        let deadZone: Double = 0.1
+        
+        // roll : left/right tilt
+        var roll = attitude.roll
+        // pitch : forward/backward tilt
+        var pitch = attitude.pitch
+        
+        // apply dead zone
+        if abs(roll) < deadZone { roll = 0 }
+        if abs(pitch) < deadZone { pitch = 0 }
+        
+        // calculate velocities : convert gradient to velocity
+        let velocityX = CGFloat(roll) * sensitivity
+        let velocityY = CGFloat(-pitch) * sensitivity   // negative for intuitive control
+        
+        // apply movement using physics body
+        if let physicsBody = ballNode.physicsBody {
+            physicsBody.velocity = CGVector(dx: velocityX, dy: velocityY)
+        }
     }
 }
