@@ -100,14 +100,23 @@ class GameScene: SKScene {
     }
     
     private func setupPathNode(with path: CGMutablePath) {
-        pathNode = SKShapeNode(path: path)
+        // node for view - expanded path has weird white triangle blank. make clean and filled shape node.
+        let subNode = SKShapeNode(path: path)
         
-        pathNode.lineWidth = 60
-        pathNode.strokeColor = .brown
-        pathNode.lineJoin = .round
+        subNode.strokeColor = .brown
+        subNode.lineWidth = 60
+        subNode.lineCap = .round
+        subNode.lineJoin = .round
         
-        // add physicsbody
-        pathNode.physicsBody = SKPhysicsBody(edgeChainFrom: path)
+        addChild(subNode)
+        
+        // node for physics - to give all bounds physics body not just center line of the path, strokingWithWidth is needed
+        let expandedPath = path.copy(strokingWithWidth: 60, lineCap: .round, lineJoin: .round, miterLimit: 0)
+        
+        pathNode = SKShapeNode(path: expandedPath)
+        pathNode.strokeColor = .clear
+        
+        pathNode.physicsBody = SKPhysicsBody(edgeChainFrom: expandedPath)
         pathNode.physicsBody?.categoryBitMask = PhysicsCategory.path
         pathNode.physicsBody?.contactTestBitMask = PhysicsCategory.ball
         pathNode.physicsBody?.collisionBitMask = PhysicsCategory.none
@@ -179,6 +188,10 @@ class GameScene: SKScene {
             ballNode.position.y = frame.minY
         } else if position.y < frame.minY {
             ballNode.position.y = frame.maxY
+        }
+        
+        if let path = pathNode.path, !path.contains(ballNode.position) {
+            print("ball out of path")
         }
     }
     
