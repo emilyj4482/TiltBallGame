@@ -110,6 +110,7 @@ class GameScene: SKScene {
         pathNode.physicsBody = SKPhysicsBody(edgeChainFrom: path)
         pathNode.physicsBody?.categoryBitMask = PhysicsCategory.path
         pathNode.physicsBody?.contactTestBitMask = PhysicsCategory.ball
+        pathNode.physicsBody?.collisionBitMask = PhysicsCategory.none
         pathNode.physicsBody?.isDynamic = false
         
         addChild(pathNode)
@@ -128,9 +129,10 @@ class GameScene: SKScene {
         ballNode.physicsBody = SKPhysicsBody(circleOfRadius: 20)
         ballNode.physicsBody?.categoryBitMask = PhysicsCategory.ball
         ballNode.physicsBody?.contactTestBitMask = PhysicsCategory.path | PhysicsCategory.goal
+        ballNode.physicsBody?.collisionBitMask = PhysicsCategory.none
         ballNode.physicsBody?.isDynamic = true
         ballNode.physicsBody?.affectedByGravity = false
-        ballNode.physicsBody?.linearDamping = 0.7
+        ballNode.physicsBody?.linearDamping = 1.0
         
         addChild(ballNode)
     }
@@ -156,6 +158,7 @@ class GameScene: SKScene {
         goalNode.physicsBody = SKPhysicsBody(circleOfRadius: 20)
         goalNode.physicsBody?.categoryBitMask = PhysicsCategory.goal
         goalNode.physicsBody?.contactTestBitMask = PhysicsCategory.ball
+        goalNode.physicsBody?.collisionBitMask = PhysicsCategory.none
         goalNode.physicsBody?.isDynamic = false
         
         addChild(goalNode)
@@ -224,7 +227,7 @@ extension GameScene: SKPhysicsContactDelegate {
          - sensitivity : high
          - deadzone : ignore small movements to reduce jitter
          */
-        let sensitivity: CGFloat = 500.0
+        let sensitivity: CGFloat = 600.0
         let deadZone: Double = 0.1
         
         // roll : left/right tilt
