@@ -20,7 +20,7 @@ class GameScene: SKScene {
         size = view.bounds.size
         backgroundColor = .white
         
-        let path = createRandomCurvedPath(size: size)
+        let path = makePath(size: size)
         setupPathNode(with: path)
         setupBallNode()
         setupGoalNode()
@@ -29,78 +29,73 @@ class GameScene: SKScene {
         startDeviceMotionUpdates()
     }
     
-    private func createRandomCurvedPath(size: CGSize) -> CGMutablePath {
+    private func makePath(size: CGSize) -> CGMutablePath {
         let xPoint: CGFloat = size.width / 2
         let yOffset: CGFloat = 100
         
         let startPoint = CGPoint(x: xPoint, y: size.height - yOffset)
         let endPoint = CGPoint(x: xPoint, y: yOffset)
         
-        // Divide the height into sections to ensure points are distributed vertically
-        let sectionHeight = (size.height - 2 * yOffset) / 4
-        
-        // Randomly decide if we start curving left or right
-        let startLeft = Bool.random()
-        
-        // Generate 3 corner points with alternating sides based on random start
-        let corner1 = CGPoint(
-            x: startLeft ?
-            CGFloat.random(in: 80...(size.width * 0.4)) :  // Left side
-            CGFloat.random(in: (size.width * 0.6)...(size.width - 80)), // Right side
-            y: size.height - yOffset - sectionHeight
-        )
-        
-        let corner2 = CGPoint(
-            x: startLeft ?
-            CGFloat.random(in: (size.width * 0.6)...(size.width - 80)) : // Right side
-            CGFloat.random(in: 80...(size.width * 0.4)), // Left side
-            y: size.height - yOffset - (sectionHeight * 2)
-        )
-        
-        let corner3 = CGPoint(
-            x: startLeft ?
-            CGFloat.random(in: 80...(size.width * 0.4)) :  // Left side again
-            CGFloat.random(in: (size.width * 0.6)...(size.width - 80)), // Right side again
-            y: size.height - yOffset - (sectionHeight * 3)
-        )
+        let randomControlPoints = makeRandomControlPoints(from: startPoint, to: endPoint)
         
         let path = CGMutablePath()
         path.move(to: startPoint)
-        
-        // Create control points closer to the path for smoother connections
-        let controlPoint1 = CGPoint(
-            x: (startPoint.x + corner1.x) / 2 + (corner1.x > startPoint.x ? -40 : 40),
-            y: (startPoint.y + corner1.y) / 2
+        path.addCurve(
+            to: endPoint,
+            control1: randomControlPoints.control1,
+            control2: randomControlPoints.control2
         )
-        
-        path.addQuadCurve(to: corner1, control: controlPoint1)
-        
-        let controlPoint2 = CGPoint(
-            x: (corner1.x + corner2.x) / 2 + (corner2.x > corner1.x ? -60 : 60),
-            y: (corner1.y + corner2.y) / 2
-        )
-        
-        path.addQuadCurve(to: corner2, control: controlPoint2)
-        
-        let controlPoint3 = CGPoint(
-            x: (corner2.x + corner3.x) / 2 + (corner3.x > corner2.x ? -60 : 60),
-            y: (corner2.y + corner3.y) / 2
-        )
-        
-        path.addQuadCurve(to: corner3, control: controlPoint3)
-        
-        let controlPoint4 = CGPoint(
-            x: (corner3.x + endPoint.x) / 2 + (endPoint.x > corner3.x ? -40 : 40),
-            y: (corner3.y + endPoint.y) / 2
-        )
-        
-        path.addQuadCurve(to: endPoint, control: controlPoint4)
         
         return path
     }
     
+    private func makeRandomControlPoints(from startPoint: CGPoint, to endPoint: CGPoint) -> (control1: CGPoint, control2: CGPoint) {
+        let startLeft = Bool.random()
+        
+        // Calculate the vertical distance and split into sections
+        let totalHeight = startPoint.y - endPoint.y
+        let firstThird = totalHeight / 3
+        let secondThird = totalHeight * 2 / 3
+        
+        // Define horizontal offset range for more dramatic curves
+        let minOffset: CGFloat = size.width * 0.5  // 50% of screen width
+        let maxOffset: CGFloat = size.width * 1.1   // 110% of screen width
+        
+        let centerX = startPoint.x
+        
+        // First control point - in the upper third, curved to one side
+        let control1X: CGFloat
+        let control1Y = startPoint.y - firstThird + CGFloat.random(in: -50...50)
+        
+        if startLeft {
+            // Curve to the left
+            control1X = centerX - CGFloat.random(in: minOffset...maxOffset)
+        } else {
+            // Curve to the right
+            control1X = centerX + CGFloat.random(in: minOffset...maxOffset)
+        }
+        
+        let controlPoint1 = CGPoint(x: control1X, y: control1Y)
+        
+        // Second control point - in the lower third, curved to the opposite side
+        let control2X: CGFloat
+        let control2Y = startPoint.y - secondThird + CGFloat.random(in: -50...50)
+        
+        if startLeft {
+            // Curve to the right (opposite of first control point)
+            control2X = centerX + CGFloat.random(in: minOffset...maxOffset)
+        } else {
+            // Curve to the left (opposite of first control point)
+            control2X = centerX - CGFloat.random(in: minOffset...maxOffset)
+        }
+        
+        let controlPoint2 = CGPoint(x: control2X, y: control2Y)
+        
+        return (controlPoint1, controlPoint2)
+    }
+    
     private func setupPathNode(with path: CGMutablePath) {
-        // node for view - expanded path has weird white triangle blank. make clean and filled shape node.
+        // node for view
         let subNode = SKShapeNode(path: path)
         
         subNode.strokeColor = .brown
@@ -110,8 +105,8 @@ class GameScene: SKScene {
         
         addChild(subNode)
         
-        // node for physics - to give all bounds physics body not just center line of the path, strokingWithWidth is needed
-        let expandedPath = path.copy(strokingWithWidth: 60, lineCap: .round, lineJoin: .round, miterLimit: 0)
+        // node for actual physics - to give all bounds physics body not just center line of the path, strokingWithWidth is needed
+        let expandedPath = path.copy(strokingWithWidth: 80, lineCap: .round, lineJoin: .round, miterLimit: 0.5)
         
         pathNode = SKShapeNode(path: expandedPath)
         pathNode.strokeColor = .clear
@@ -171,36 +166,6 @@ class GameScene: SKScene {
         goalNode.physicsBody?.isDynamic = false
         
         addChild(goalNode)
-    }
-    
-    override func update(_ currentTime: TimeInterval) {
-        // current ball position
-        let position = ballNode.position
-        
-        // make ball node never disappear from the frame
-        if position.x > frame.maxX {
-            ballNode.position.x = frame.minX
-        } else if position.x < frame.minX {
-            ballNode.position.x = frame.maxX
-        }
-        
-        if position.y > frame.maxY {
-            ballNode.position.y = frame.minY
-        } else if position.y < frame.minY {
-            ballNode.position.y = frame.maxY
-        }
-        
-        if let path = pathNode.path, !path.contains(ballNode.position) {
-            print("ball out of path")
-        }
-    }
-    
-    // debugging
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        let location = touch.location(in: self)
-        
-        print(location)
     }
     
     deinit {
@@ -266,6 +231,11 @@ extension GameScene: SKPhysicsContactDelegate {
         if (contact.bodyA.categoryBitMask == PhysicsCategory.ball && contact.bodyB.categoryBitMask == PhysicsCategory.goal) ||
             (contact.bodyB.categoryBitMask == PhysicsCategory.ball && contact.bodyA.categoryBitMask == PhysicsCategory.goal) {
             print("goal")
+        }
+        
+        if (contact.bodyA.categoryBitMask == PhysicsCategory.ball && contact.bodyB.categoryBitMask == PhysicsCategory.path) ||
+            (contact.bodyB.categoryBitMask == PhysicsCategory.ball && contact.bodyA.categoryBitMask == PhysicsCategory.path) {
+            print("contact")
         }
     }
 }
