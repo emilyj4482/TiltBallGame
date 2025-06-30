@@ -12,9 +12,11 @@ class GameScene: SKScene {
     
     private var motionManager = CMMotionManager()
     
-    private var pathNode: SKShapeNode!
     private var ballNode: SKShapeNode!
     private var goalNode: SKShapeNode!
+    
+    private var pathPhysicalNode: SKShapeNode!
+    private var pathVisualNode: SKShapeNode!
     
     override func didMove(to view: SKView) {
         size = view.bounds.size
@@ -96,28 +98,28 @@ class GameScene: SKScene {
     
     private func setupPathNode(with path: CGMutablePath) {
         // node for view
-        let subNode = SKShapeNode(path: path)
+        pathVisualNode = SKShapeNode(path: path)
         
-        subNode.strokeColor = .brown
-        subNode.lineWidth = 60
-        subNode.lineCap = .round
-        subNode.lineJoin = .round
+        pathVisualNode.strokeColor = .brown
+        pathVisualNode.lineWidth = 60
+        pathVisualNode.lineCap = .round
+        pathVisualNode.lineJoin = .round
         
-        addChild(subNode)
+        addChild(pathVisualNode)
         
-        // node for actual physics - to give all bounds physics body not just center line of the path, strokingWithWidth is needed
-        let expandedPath = path.copy(strokingWithWidth: 80, lineCap: .round, lineJoin: .round, miterLimit: 0.5)
+        // node for actual physics - to give outer line physicsbody not the centre line
+        let expandedPath = path.copy(strokingWithWidth: 80, lineCap: .round, lineJoin: .round, miterLimit: 0)
         
-        pathNode = SKShapeNode(path: expandedPath)
-        pathNode.strokeColor = .clear
+        pathPhysicalNode = SKShapeNode(path: expandedPath)
+        pathPhysicalNode.strokeColor = .clear
         
-        pathNode.physicsBody = SKPhysicsBody(edgeChainFrom: expandedPath)
-        pathNode.physicsBody?.categoryBitMask = PhysicsCategory.path
-        pathNode.physicsBody?.contactTestBitMask = PhysicsCategory.ball
-        pathNode.physicsBody?.collisionBitMask = PhysicsCategory.none
-        pathNode.physicsBody?.isDynamic = false
+        pathPhysicalNode.physicsBody = SKPhysicsBody(edgeChainFrom: expandedPath)
+        pathPhysicalNode.physicsBody?.categoryBitMask = PhysicsCategory.path
+        pathPhysicalNode.physicsBody?.contactTestBitMask = PhysicsCategory.ball
+        pathPhysicalNode.physicsBody?.collisionBitMask = PhysicsCategory.none
+        pathPhysicalNode.physicsBody?.isDynamic = false
         
-        addChild(pathNode)
+        addChild(pathPhysicalNode)
     }
     
     private func setupBallNode() {
@@ -230,12 +232,60 @@ extension GameScene: SKPhysicsContactDelegate {
     func didBegin(_ contact: SKPhysicsContact) {
         if (contact.bodyA.categoryBitMask == PhysicsCategory.ball && contact.bodyB.categoryBitMask == PhysicsCategory.goal) ||
             (contact.bodyB.categoryBitMask == PhysicsCategory.ball && contact.bodyA.categoryBitMask == PhysicsCategory.goal) {
-            print("goal")
+            ballNode.physicsBody?.isDynamic = false
+            
+            let moveAction = SKAction.move(to: goalNode.position, duration: 0.5)
+            ballNode.run(moveAction) { [weak self] in
+                self?.gameEnd(.clear)
+            }
         }
         
         if (contact.bodyA.categoryBitMask == PhysicsCategory.ball && contact.bodyB.categoryBitMask == PhysicsCategory.path) ||
             (contact.bodyB.categoryBitMask == PhysicsCategory.ball && contact.bodyA.categoryBitMask == PhysicsCategory.path) {
-            print("contact")
+            ballNode.physicsBody?.isDynamic = false
+            gameEnd(.over)
         }
+    }
+    
+    private func gameEnd(_ state: GameState) {
+        // gray scale visible background cover
+        let grayCover = SKSpriteNode(color: .gray.withAlphaComponent(0.5), size: size)
+        grayCover.anchorPoint = .zero
+        grayCover.zPosition = 10
+        addChild(grayCover)
+        
+        let titleLabel = SKLabelNode(text: state.title)
+        titleLabel.fontName = "HelveticaNeue-Light"
+        titleLabel.fontSize = 60
+        titleLabel.fontColor = .black
+        titleLabel.zPosition = 11
+        titleLabel.position = CGPoint(x: size.width / 2, y: size.height / 2 + 100)
+        grayCover.addChild(titleLabel)
+        
+        let button = ButtonNode(state: state)
+        button.position = CGPoint(x: size.width / 2, y: size.height / 2 - 50)
+        button.action = { [weak self] in
+            self?.resetBallPosition()
+            
+            if state == .clear {
+                self?.restart()
+            }
+            
+            grayCover.removeFromParent()
+        }
+        grayCover.addChild(button)
+    }
+    
+    private func resetBallPosition() {
+        ballNode.position = CGPoint(x: size.width / 2, y: size.height - 100)
+        ballNode.physicsBody?.isDynamic = true
+    }
+    
+    private func restart() {
+        pathPhysicalNode.removeFromParent()
+        pathVisualNode.removeFromParent()
+        
+        let path = makePath(size: size)
+        setupPathNode(with: path)
     }
 }
