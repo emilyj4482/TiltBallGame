@@ -164,7 +164,7 @@ class GameScene: SKScene {
         goalNode.position = position
         
         // add physicsbody
-        goalNode.physicsBody = SKPhysicsBody(circleOfRadius: 20)
+        goalNode.physicsBody = SKPhysicsBody(circleOfRadius: 5)
         goalNode.physicsBody?.categoryBitMask = PhysicsCategory.goal
         goalNode.physicsBody?.contactTestBitMask = PhysicsCategory.ball
         goalNode.physicsBody?.collisionBitMask = PhysicsCategory.none
@@ -259,6 +259,13 @@ extension GameScene: SKPhysicsContactDelegate {
         // apply movement using physics body
         if let physicsBody = ballNode.physicsBody {
             physicsBody.velocity = CGVector(dx: velocityX, dy: velocityY)
+        }
+    }
+    
+    func didBegin(_ contact: SKPhysicsContact) {
+        if (contact.bodyA.categoryBitMask == PhysicsCategory.ball && contact.bodyB.categoryBitMask == PhysicsCategory.goal) ||
+            (contact.bodyB.categoryBitMask == PhysicsCategory.ball && contact.bodyA.categoryBitMask == PhysicsCategory.goal) {
+            print("goal")
         }
     }
 }
