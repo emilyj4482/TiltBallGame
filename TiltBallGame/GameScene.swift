@@ -173,6 +173,8 @@ class GameScene: SKScene {
     deinit {
         motionManager.stopDeviceMotionUpdates()
     }
+    
+    private var isGameEndScreenVisible = false
 }
 
 extension GameScene: SKPhysicsContactDelegate {
@@ -248,11 +250,18 @@ extension GameScene: SKPhysicsContactDelegate {
     }
     
     private func gameEnd(_ state: GameState) {
+        // prevent multiple gray covers from quick multiple times of calls
+        guard !isGameEndScreenVisible else { return }
+        isGameEndScreenVisible = true
+        
         // gray scale visible background cover
         let grayCover = SKSpriteNode(color: .gray.withAlphaComponent(0.5), size: size)
         grayCover.anchorPoint = .zero
         grayCover.zPosition = 10
+        grayCover.alpha = 0
         addChild(grayCover)
+        
+        grayCover.run(SKAction.fadeIn(withDuration: 0.3))
         
         let titleLabel = SKLabelNode(text: state.title)
         titleLabel.fontName = "HelveticaNeue-Light"
@@ -264,6 +273,7 @@ extension GameScene: SKPhysicsContactDelegate {
         
         let button = ButtonNode(state: state)
         button.position = CGPoint(x: size.width / 2, y: size.height / 2 - 50)
+        
         button.action = { [weak self] in
             self?.resetBallPosition()
             
@@ -271,12 +281,18 @@ extension GameScene: SKPhysicsContactDelegate {
                 self?.restart()
             }
             
-            grayCover.removeFromParent()
+            grayCover.run(SKAction.fadeOut(withDuration: 0.2)) {
+                grayCover.removeFromParent()
+                self?.isGameEndScreenVisible = false
+                self?.isUserInteractionEnabled = true
+            }
         }
+        
         grayCover.addChild(button)
     }
     
     private func resetBallPosition() {
+        guard ballNode.parent != nil else { return }
         ballNode.position = CGPoint(x: size.width / 2, y: size.height - 100)
         ballNode.physicsBody?.isDynamic = true
     }
