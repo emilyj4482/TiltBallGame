@@ -281,11 +281,9 @@ extension GameScene: SKPhysicsContactDelegate {
                 self?.restart()
             }
             
-            grayCover.run(SKAction.fadeOut(withDuration: 0.2)) {
-                grayCover.removeFromParent()
-                self?.isGameEndScreenVisible = false
-                self?.isUserInteractionEnabled = true
-            }
+            grayCover.removeFromParent()
+            self?.isGameEndScreenVisible = false
+            self?.isUserInteractionEnabled = true
         }
         
         grayCover.addChild(button)
