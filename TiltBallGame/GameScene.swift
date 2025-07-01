@@ -275,6 +275,8 @@ extension GameScene: SKPhysicsContactDelegate {
         button.position = CGPoint(x: size.width / 2, y: size.height / 2 - 50)
         
         button.action = { [weak self] in
+            button.isUserInteractionEnabled = false
+            
             self?.resetBallPosition()
             
             if state == .clear {
@@ -283,7 +285,7 @@ extension GameScene: SKPhysicsContactDelegate {
             
             grayCover.removeFromParent()
             self?.isGameEndScreenVisible = false
-            self?.isUserInteractionEnabled = true
+            button.isUserInteractionEnabled = true
         }
         
         grayCover.addChild(button)
